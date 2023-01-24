@@ -29,7 +29,7 @@
 #include <event2/util.h>
 #include <event2/event.h>
 
-static const char MESSAGE[] = "Hello, World!\n";
+static const char MESSAGE[] = "Hello, World! ";
 
 static int PORT = 9995;
 
@@ -112,12 +112,14 @@ listener_cb(struct evconnlistener *listener, evutil_socket_t fd,
 
     bev = bufferevent_socket_new(base, fd, BEV_OPT_CLOSE_ON_FREE);
     if (!bev) {
-        fprintf(stderr, "Error constructing bufferevent!");
+        fprintf(stderr, "Error constructing bufferevent!\n");
         event_base_loopbreak(base);
         return;
     }
     bufferevent_setcb(bev, conn_readcb, conn_writecb, conn_eventcb, NULL);
     bufferevent_enable(bev, EV_WRITE | EV_READ);
+
+    //send first message to trigger event loop
     bufferevent_write(bev, MESSAGE, strlen(MESSAGE)); //
 }
 
