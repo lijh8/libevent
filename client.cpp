@@ -29,7 +29,7 @@
 #include <event2/util.h>
 #include <event2/event.h>
 
-static const char MESSAGE[] = "Hello, World!\n";
+static const char MESSAGE[] = "Hello, World! ";
 const char *message2;
 
 static int PORT = 9995;
@@ -85,7 +85,7 @@ main(int argc, char **argv)
 
     struct bufferevent *    bev = bufferevent_socket_new(base, -1, BEV_OPT_CLOSE_ON_FREE);
     if (!bev) {
-        fprintf(stderr, "Error constructing bufferevent!");
+        fprintf(stderr, "Error constructing bufferevent!\n");
         event_base_loopbreak(base);
         return 1;
     }
@@ -132,7 +132,7 @@ listener_cb(struct evconnlistener *listener, evutil_socket_t fd,
 
     bev = bufferevent_socket_new(base, fd, BEV_OPT_CLOSE_ON_FREE);
     if (!bev) {
-        fprintf(stderr, "Error constructing bufferevent!");
+        fprintf(stderr, "Error constructing bufferevent!\n");
         event_base_loopbreak(base);
         return;
     }
@@ -185,8 +185,8 @@ conn_eventcb(struct bufferevent *bev, short events, void *user_data)
             evutil_socket_error_to_string(EVUTIL_SOCKET_ERROR()));
         finished = 1;
     } else if (events & BEV_EVENT_CONNECTED) {
-        // send a message to trigger event loop ?
-        const char *buf = "Hello, World!\n";
+        //send first message to trigger event loop
+        const char *buf = "Hello, World! ";
         bufferevent_write(bev, buf, strlen(buf)); //
     }
 
@@ -195,8 +195,8 @@ conn_eventcb(struct bufferevent *bev, short events, void *user_data)
 
     if (finished) {
         struct timeval delay = { 2, 0 };
-        // free(user_data);
-        // bufferevent_free(bev);
+        free(user_data);
+        bufferevent_free(bev);
         event_base_loopexit((event_base *)user_data, &delay);
     }
 }
