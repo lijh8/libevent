@@ -1,0 +1,85 @@
+How to trigger event loop of libevent
+
+
+The following is what I got about BEV_EVENT_CONNECTED. According to the
+change log, I will need to write that one time message to trigger the
+writecb on client side. Also found examples demonstrate the usage.
+
+
+```C
+// libevent-book/Ref6_bufferevent.txt:
+void eventcb(struct bufferevent *bev, short events, void *ptr)
+{
+    if (events & BEV_EVENT_CONNECTED) {
+         /* We're connected to 127.0.0.1:8080.   Ordinarily we'd do
+            something here, like start reading or writing. */
+
+        //send first message to trigger event loop
+        const char *buf = "Hello, World! "; //new
+        bufferevent_write(bev, buf, strlen(buf)); //new
+
+    } else if (events & BEV_EVENT_ERROR) {
+         /* An error occured while connecting. */
+    }
+}
+```
+
+---
+
+
+```C
+// libevent/ChangeLog-2.0:
+Changes in 2.0.3-alpha (20 Nov 2009):
+When we send a BEV_EVENT_CONNECTED to indicate connected status, we no
+longer invoke the write callback as well unless we actually wrote data
+too.
+
+
+// libevent-book/Ref6a_advanced_bufferevents.txt:
+Once the handshake is complete, the new bufferevent's event callback
+gets invoked with BEV_EVENT_CONNECTED in flags.
+
+
+// libevent-book/Ref6_bufferevent.txt:
+Note that you only get a BEV_EVENT_CONNECTED event if you launch the
+connect() attempt using bufferevent_socket_connect().
+
+
+// libevent/sample/ssl-client-mbedtls.c:
+static void
+eventcb(struct bufferevent *bev, short what, void *arg)
+{
+    fprintf(stderr, "\n---------------eventcb %d\n", what);
+    if (what & BEV_EVENT_CONNECTED) {
+        const char headers[] = "GET / HTTP/1.1\r\n"
+                               "HOST: " SERVER_NAME "\r\n"
+                               "User-Agent: curl/7.65.1\r\n"
+                               "Connection: Keep-Alive\r\n"
+                               "\r\n";
+        bufferevent_write(
+            bev, headers, sizeof(headers) - 1); // without ending '\0'
+        // bufferevent_disable(bev, EV_WRITE);
+        fprintf(stderr, "write request completely\n");
+    } else if (what & (BEV_EVENT_EOF | BEV_EVENT_ERROR)) {
+        fprintf(stderr, "closed\n");
+        bufferevent_free(bev);
+    }
+}
+
+
+// libevent/test/test-fdleak.c:
+/* Send a byte to the server. */
+static void
+client_event_cb(struct bufferevent *bev, short events, void *ctx)
+{
+    if (events & BEV_EVENT_CONNECTED) {
+        unsigned char tmp = 'A';
+        bufferevent_write(bev, &tmp, 1);
+    } else if (events & BEV_EVENT_ERROR) {
+        puts("Client socket got error!");
+        exit(2);
+    }
+
+    bufferevent_enable(bev, EV_READ);
+}
+```
