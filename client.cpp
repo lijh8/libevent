@@ -34,8 +34,8 @@ const char *message2;
 
 static int PORT = 9995;
 
-static void listener_cb(struct evconnlistener *, evutil_socket_t,
-    struct sockaddr *, int socklen, void *);
+// static void listener_cb(struct evconnlistener *, evutil_socket_t,
+//     struct sockaddr *, int socklen, void *);
 static void conn_readcb(struct bufferevent *, void *);
 static void conn_writecb(struct bufferevent *, void *);
 static void conn_eventcb(struct bufferevent *, short, void *);
@@ -119,27 +119,26 @@ main(int argc, char **argv)
     return 0;
 }
 
-static void
-listener_cb(struct evconnlistener *listener, evutil_socket_t fd,
-    struct sockaddr *sa, int socklen, void *user_data)
-{
-    struct sockaddr_in *in = (struct sockaddr_in *)sa;
-    printf("accept connection: %s:%u \n",
-        inet_ntoa(in->sin_addr), in->sin_port);
+// static void
+// listener_cb(struct evconnlistener *listener, evutil_socket_t fd,
+//     struct sockaddr *sa, int socklen, void *user_data)
+// {
+//     struct sockaddr_in *in = (struct sockaddr_in *)sa;
+//     printf("accept connection: %s:%u \n",
+//         inet_ntoa(in->sin_addr), in->sin_port);
 
-    struct event_base *base = (event_base *)user_data;
-    struct bufferevent *bev;
+//     struct event_base *base = (event_base *)user_data;
+//     struct bufferevent *bev;
 
-    bev = bufferevent_socket_new(base, fd, BEV_OPT_CLOSE_ON_FREE);
-    if (!bev) {
-        fprintf(stderr, "Error constructing bufferevent!\n");
-        event_base_loopbreak(base);
-        return;
-    }
-    bufferevent_setcb(bev, conn_readcb, conn_writecb, conn_eventcb, NULL);
-    bufferevent_enable(bev, EV_WRITE | EV_READ);
-    bufferevent_write(bev, MESSAGE, strlen(MESSAGE)); //
-}
+//     bev = bufferevent_socket_new(base, fd, BEV_OPT_CLOSE_ON_FREE);
+//     if (!bev) {
+//         fprintf(stderr, "Error constructing bufferevent!\n");
+//         event_base_loopbreak(base);
+//         return;
+//     }
+//     bufferevent_setcb(bev, conn_readcb, conn_writecb, conn_eventcb, NULL);
+//     bufferevent_enable(bev, EV_WRITE | EV_READ);
+// }
 
 static void
 conn_readcb(struct bufferevent *bev, void *user_data)
