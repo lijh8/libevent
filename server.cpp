@@ -8,6 +8,7 @@
 
 
 #include <string.h>
+#include <string>
 #include <errno.h>
 #include <stdio.h>
 #include <signal.h>
@@ -72,15 +73,14 @@ main(int argc, char **argv)
 
     listener = evconnlistener_new_bind(base, listener_cb, (void *)base,
         LEV_OPT_REUSEABLE|LEV_OPT_CLOSE_ON_FREE, -1,
-        (struct sockaddr*)&sin,
-        sizeof(sin));
+        (struct sockaddr*)&sin, sizeof(sin));
 
     if (!listener) {
         fprintf(stderr, "Could not create a listener!\n");
         return 1;
     }
 
-    printf("listen on port: %hd\n", PORT);
+    printf("listen on port: %d\n", PORT);
 
     signal_event = evsignal_new(base, SIGINT, signal_cb, (void *)base);
 
@@ -119,7 +119,6 @@ listener_cb(struct evconnlistener *listener, evutil_socket_t fd,
     bufferevent_setcb(bev, conn_readcb, conn_writecb, conn_eventcb, NULL);
     bufferevent_enable(bev, EV_WRITE | EV_READ);
 
-    //send first message to trigger event loop
     bufferevent_write(bev, MESSAGE, strlen(MESSAGE)); //
 }
 
