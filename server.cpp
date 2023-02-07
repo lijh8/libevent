@@ -1,3 +1,4 @@
+// ./libevent/sample/hello-world.c
 /*
   This example program provides a trivial server program that listens for TCP
   connections on port 9995.  When they arrive, it writes a short message to
@@ -119,7 +120,7 @@ listener_cb(struct evconnlistener *listener, evutil_socket_t fd,
     bufferevent_setcb(bev, conn_readcb, conn_writecb, conn_eventcb, NULL);
     bufferevent_enable(bev, EV_WRITE | EV_READ);
 
-    bufferevent_write(bev, MESSAGE, strlen(MESSAGE)); //
+    // bufferevent_write(bev, MESSAGE, strlen(MESSAGE)); //
 }
 
 static void
