@@ -1,3 +1,4 @@
+// ./libevent/sample/hello-world.c
 /*
   This example program provides a trivial server program that listens for TCP
   connections on port 9995.  When they arrive, it writes a short message to
@@ -184,9 +185,19 @@ conn_eventcb(struct bufferevent *bev, short events, void *user_data)
             evutil_socket_error_to_string(EVUTIL_SOCKET_ERROR()));
         finished = 1;
     } else if (events & BEV_EVENT_CONNECTED) {
-        //send first message to trigger event loop
-        const char *buf = "Hello, World! ";
-        bufferevent_write(bev, buf, strlen(buf)); //
+        // ./libevent/ChangeLog-2.0
+        // Changes in 2.0.3-alpha (20 Nov 2009):
+        // When we send a BEV_EVENT_CONNECTED to indicate connected
+        // status, we no longer invoke the write callback as well unless
+        // we actually wrote data too.
+
+        // ./libevent/sample/ssl-client-mbedtls.c
+        const char *buf = "Hello, World! "; //new
+        bufferevent_write(bev, buf, strlen(buf)); //new
+
+        //or,
+        // ./libevent/test/test-ratelim.c
+        // conn_writecb(bev, user_data); //
     }
 
     /* None of the other events can happen here, since we haven't enabled
@@ -200,13 +211,13 @@ conn_eventcb(struct bufferevent *bev, short events, void *user_data)
     }
 }
 
-static void
-signal_cb(evutil_socket_t sig, short events, void *user_data)
-{
-    struct event_base *base = (event_base *)user_data;
-    struct timeval delay = { 2, 0 };
+// static void
+// signal_cb(evutil_socket_t sig, short events, void *user_data)
+// {
+//     struct event_base *base = (event_base *)user_data;
+//     struct timeval delay = { 2, 0 };
 
-    printf("Caught an interrupt signal; exiting cleanly in two seconds.\n");
+//     printf("Caught an interrupt signal; exiting cleanly in two seconds.\n");
 
-    event_base_loopexit(base, &delay);
-}
+//     event_base_loopexit(base, &delay);
+// }
