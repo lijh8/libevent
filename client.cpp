@@ -97,7 +97,7 @@ main(int argc, char **argv)
         bev, (struct sockaddr *)&sin, sizeof(sin)) < 0)
     {
         bufferevent_free(bev);
-        printf("bufferevent_socket_connect failed\n");
+        printf("Error setting up connection!\n");
         return 1;
     }
 
@@ -116,7 +116,7 @@ main(int argc, char **argv)
     // event_free(signal_event);
     event_base_free(base);
 
-    printf("done\n");
+    printf("Done\n");
     return 0;
 }
 
@@ -150,7 +150,7 @@ conn_readcb(struct bufferevent *bev, void *user_data)
 
     if (length > 0) {
         bufferevent_read(bev, buf, sizeof(buf) - 1);
-        printf("%s\n", buf);
+        printf("%s", buf);
     }
 }
 
@@ -167,7 +167,7 @@ conn_writecb(struct bufferevent *bev, void *user_data)
     sleep(1); //test
     static int cnt = 1;
     char buf[1000] = {'\0'};
-    snprintf(buf, sizeof(buf),"hello from client %s %d ", message2, cnt++);
+    snprintf(buf, sizeof(buf),"hello from client %s %d\n", message2, cnt++);
     bufferevent_write(bev, buf, strlen(buf));
 }
 
@@ -181,8 +181,7 @@ conn_eventcb(struct bufferevent *bev, short events, void *user_data)
         finished = 1;
     } else if (events & BEV_EVENT_ERROR) {
         printf("Got an error on the connection: %s\n",
-            // strerror(errno));/*XXX win32*/
-            evutil_socket_error_to_string(EVUTIL_SOCKET_ERROR()));
+            strerror(errno));/*XXX win32*/
         finished = 1;
     } else if (events & BEV_EVENT_CONNECTED) {
         // ./libevent/ChangeLog-2.0
@@ -192,10 +191,10 @@ conn_eventcb(struct bufferevent *bev, short events, void *user_data)
         // we actually wrote data too.
 
         // ./libevent/sample/ssl-client-mbedtls.c
-        const char *buf = "Hello, World! "; //new
-        bufferevent_write(bev, buf, strlen(buf)); //new
+        const char *buf = "Client connected.\n";
+        bufferevent_write(bev, buf, strlen(buf));
 
-        //or,
+        //or, call write callback directly
         // ./libevent/test/test-ratelim.c
         // conn_writecb(bev, user_data); //
     }
