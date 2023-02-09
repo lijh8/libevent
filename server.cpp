@@ -31,6 +31,8 @@
 #include <event2/util.h>
 #include <event2/event.h>
 
+#include <sanitizer/lsan_interface.h>
+
 static const char MESSAGE[] = "Hello, World! ";
 
 static int PORT = 9995;
@@ -41,6 +43,15 @@ static void conn_readcb(struct bufferevent *, void *);
 static void conn_writecb(struct bufferevent *, void *);
 static void conn_eventcb(struct bufferevent *, short, void *);
 static void signal_cb(evutil_socket_t, short, void *);
+
+void handlerCont(int signum){
+  if (signum == SIGCONT) {
+    printf("Got SIGCONT\n");
+  }
+#ifndef NDEBUG
+  __lsan_do_recoverable_leak_check();
+#endif
+}
 
 int
 main(int argc, char **argv)
@@ -56,6 +67,7 @@ main(int argc, char **argv)
 #endif
 
     signal(SIGPIPE, SIG_IGN);
+    signal(SIGCONT, handlerCont); // $ man 7 signal
 
     base = event_base_new();
     if (!base) {
@@ -81,7 +93,7 @@ main(int argc, char **argv)
         return 1;
     }
 
-    printf("listen on port: %d\n", PORT);
+    printf("Listen on port: %d\n", PORT);
 
     signal_event = evsignal_new(base, SIGINT, signal_cb, (void *)base);
 
@@ -96,7 +108,7 @@ main(int argc, char **argv)
     event_free(signal_event);
     event_base_free(base);
 
-    printf("done\n");
+    printf("Done\n");
     return 0;
 }
 
@@ -105,7 +117,7 @@ listener_cb(struct evconnlistener *listener, evutil_socket_t fd,
     struct sockaddr *sa, int socklen, void *user_data)
 {
     struct sockaddr_in *in = (struct sockaddr_in *)sa;
-    printf("accept connection: %s:%u \n",
+    printf("Accept connection: %s:%u \n",
         inet_ntoa(in->sin_addr), in->sin_port);
 
     struct event_base *base = (event_base *)user_data;
@@ -132,7 +144,7 @@ conn_readcb(struct bufferevent *bev, void *user_data)
 
     if (length > 0) {
         bufferevent_read(bev, buf, sizeof(buf) - 1);
-        printf("%s\n", buf);
+        printf("%s", buf);
     }
 }
 
@@ -149,7 +161,7 @@ conn_writecb(struct bufferevent *bev, void *user_data)
     sleep(1); //test
     static int cnt = 1;
     char buf[1000] = {'\0'};
-    snprintf(buf, sizeof(buf),"hello from server %d ", cnt++);
+    snprintf(buf, sizeof(buf),"hello from server %d\n", cnt++);
     bufferevent_write(bev, buf, strlen(buf));
 }
 
@@ -163,8 +175,7 @@ conn_eventcb(struct bufferevent *bev, short events, void *user_data)
         finished = 1;
     } else if (events & BEV_EVENT_ERROR) {
         printf("Got an error on the connection: %s\n",
-            // strerror(errno));/*XXX win32*/
-            evutil_socket_error_to_string(EVUTIL_SOCKET_ERROR()));
+            strerror(errno));/*XXX win32*/
         finished = 1;
     }
     /* None of the other events can happen here, since we haven't enabled
