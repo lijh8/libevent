@@ -15,10 +15,10 @@
 #include <event2/util.h>
 
 struct event *g_timer_ev = nullptr;
-int g_client_seq = 0;
+int g_seq = 0;
 std::string g_tag;
 
-void server_read_cb(struct bufferevent *bev, void *ctx)
+void read_cb(struct bufferevent *bev, void *ctx)
 {
     struct evbuffer *input = bufferevent_get_input(bev);
     char *line;
@@ -31,23 +31,23 @@ void server_read_cb(struct bufferevent *bev, void *ctx)
     }
 }
 
-void client_timer_cb(evutil_socket_t fd, short event, void *arg)
+void timer_cb(evutil_socket_t fd, short event, void *arg)
 {
     struct bufferevent *bev = static_cast<struct bufferevent *>(arg);
-    g_client_seq++;
+    g_seq++;
 
-    std::string msg = "hello from client " + g_tag + " " + std::to_string(g_client_seq) + "\n";
+    std::string msg = "hello from client " + g_tag + " " + std::to_string(g_seq) + "\n";
     bufferevent_write(bev, msg.c_str(), msg.length());
 }
 
-void server_event_cb(struct bufferevent *bev, short events, void *ctx)
+void event_cb(struct bufferevent *bev, short events, void *ctx)
 {
     int conn_fd = bufferevent_getfd(bev);
 
     if (events & BEV_EVENT_CONNECTED)
     {
         std::cout << "Connected to server (fd=" << conn_fd << ")" << std::endl;
-        g_timer_ev = event_new(bufferevent_get_base(bev), -1, EV_PERSIST, client_timer_cb, bev);
+        g_timer_ev = event_new(bufferevent_get_base(bev), -1, EV_PERSIST, timer_cb, bev);
         struct timeval tv = {1, 0};
         event_add(g_timer_ev, &tv);
         return;
@@ -111,7 +111,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    bufferevent_setcb(bev, server_read_cb, nullptr, server_event_cb, bev);
+    bufferevent_setcb(bev, read_cb, nullptr, event_cb, bev);
     bufferevent_enable(bev, EV_READ);
 
     struct sockaddr_in sin;

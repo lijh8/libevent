@@ -17,9 +17,9 @@
 #include <event2/util.h>
 
 std::unordered_map<int, struct event *> g_timers;
-std::unordered_map<int, int> g_server_seq;
+std::unordered_map<int, int> g_seq;
 
-void client_read_cb(struct bufferevent *bev, void *ctx)
+void read_cb(struct bufferevent *bev, void *ctx)
 {
     struct evbuffer *input = bufferevent_get_input(bev);
     char *line;
@@ -32,20 +32,20 @@ void client_read_cb(struct bufferevent *bev, void *ctx)
     }
 }
 
-void server_timer_cb(evutil_socket_t fd, short event, void *arg)
+void timer_cb(evutil_socket_t fd, short event, void *arg)
 {
     struct bufferevent *bev = static_cast<struct bufferevent *>(arg);
     int conn_fd = bufferevent_getfd(bev);
     if (conn_fd < 0)
         return;
 
-    g_server_seq[conn_fd]++;
+    g_seq[conn_fd]++;
 
-    std::string msg = "hello from server " + std::to_string(g_server_seq[conn_fd]) + "\n";
+    std::string msg = "hello from server " + std::to_string(g_seq[conn_fd]) + "\n";
     bufferevent_write(bev, msg.c_str(), msg.length());
 }
 
-void client_event_cb(struct bufferevent *bev, short events, void *ctx)
+void event_cb(struct bufferevent *bev, short events, void *ctx)
 {
     int conn_fd = bufferevent_getfd(bev);
 
@@ -75,12 +75,12 @@ void client_event_cb(struct bufferevent *bev, short events, void *ctx)
         g_timers.erase(it);
     }
 
-    g_server_seq.erase(conn_fd);
+    g_seq.erase(conn_fd);
     bufferevent_free(bev);
 }
 
-void accept_cb(struct evconnlistener *listener, evutil_socket_t fd,
-               struct sockaddr *addr, int socklen, void *ctx)
+void listener_cb(struct evconnlistener *listener, evutil_socket_t fd,
+                 struct sockaddr *addr, int socklen, void *ctx)
 {
     struct event_base *base = static_cast<struct event_base *>(ctx);
 
@@ -92,7 +92,7 @@ void accept_cb(struct evconnlistener *listener, evutil_socket_t fd,
         return;
     }
 
-    bufferevent_setcb(bev, client_read_cb, nullptr, client_event_cb, bev);
+    bufferevent_setcb(bev, read_cb, nullptr, event_cb, bev);
     bufferevent_enable(bev, EV_READ);
 
     char ip_str[INET_ADDRSTRLEN];
@@ -103,9 +103,9 @@ void accept_cb(struct evconnlistener *listener, evutil_socket_t fd,
     std::cout << "New client connected, fd=" << fd
               << ", peer=" << ip_str << ":" << port << std::endl;
 
-    g_server_seq[fd] = 0;
+    g_seq[fd] = 0;
 
-    struct event *timer_ev = event_new(base, -1, EV_PERSIST, server_timer_cb, bev);
+    struct event *timer_ev = event_new(base, -1, EV_PERSIST, timer_cb, bev);
     g_timers[fd] = timer_ev;
 
     struct timeval tv = {1, 0};
@@ -136,7 +136,7 @@ int main(int argc, char **argv)
     sin.sin_port = htons(port);
 
     struct evconnlistener *listener = evconnlistener_new_bind(
-        base, accept_cb, base,
+        base, listener_cb, base,
         LEV_OPT_REUSEABLE | LEV_OPT_CLOSE_ON_FREE,
         -1, (struct sockaddr *)&sin, sizeof(sin));
 
