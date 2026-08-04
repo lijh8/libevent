@@ -26,7 +26,7 @@ void server_read_cb(struct bufferevent *bev, void *ctx)
 
     while ((line = evbuffer_readln(input, &len, EVBUFFER_EOL_LF)) != NULL)
     {
-        std::cout << "[Received from server] " << line << std::endl;
+        std::cout << "Received from server: " << line << std::endl;
         free(line);
     }
 }
@@ -46,7 +46,7 @@ void server_event_cb(struct bufferevent *bev, short events, void *ctx)
 
     if (events & BEV_EVENT_CONNECTED)
     {
-        std::cout << "[INFO] Connected to server (fd=" << conn_fd << ")" << std::endl;
+        std::cout << "Connected to server (fd=" << conn_fd << ")" << std::endl;
         g_timer_ev = event_new(bufferevent_get_base(bev), -1, EV_PERSIST, client_timer_cb, bev);
         struct timeval tv = {1, 0};
         event_add(g_timer_ev, &tv);
@@ -55,13 +55,17 @@ void server_event_cb(struct bufferevent *bev, short events, void *ctx)
 
     if (events & BEV_EVENT_EOF)
     {
-        std::cout << "[INFO] Server connection closed (fd=" << conn_fd << ")" << std::endl;
+        std::cout << "Server connection closed (fd=" << conn_fd << ")" << std::endl;
     }
     else if (events & BEV_EVENT_ERROR)
     {
         int err = EVUTIL_SOCKET_ERROR();
-        std::cerr << "[ERROR] Server connection error (fd=" << conn_fd << "): "
+        std::cerr << "Server connection error (fd=" << conn_fd << "): "
                   << evutil_socket_error_to_string(err) << std::endl;
+    }
+    else if (events & BEV_EVENT_TIMEOUT)
+    {
+        std::cout << "Server connection timeout (fd=" << conn_fd << ")" << std::endl;
     }
     else
     {

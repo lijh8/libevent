@@ -27,7 +27,7 @@ void client_read_cb(struct bufferevent *bev, void *ctx)
 
     while ((line = evbuffer_readln(input, &len, EVBUFFER_EOL_LF)) != NULL)
     {
-        std::cout << "[Received from client] " << line << std::endl;
+        std::cout << "Received from client: " << line << std::endl;
         free(line);
     }
 }
@@ -51,13 +51,17 @@ void client_event_cb(struct bufferevent *bev, short events, void *ctx)
 
     if (events & BEV_EVENT_EOF)
     {
-        std::cout << "[INFO] Client connection closed (fd=" << conn_fd << ")" << std::endl;
+        std::cout << "Client connection closed (fd=" << conn_fd << ")" << std::endl;
     }
     else if (events & BEV_EVENT_ERROR)
     {
         int err = EVUTIL_SOCKET_ERROR();
-        std::cerr << "[ERROR] Client connection error (fd=" << conn_fd << "): "
+        std::cerr << "Client connection error (fd=" << conn_fd << "): "
                   << evutil_socket_error_to_string(err) << std::endl;
+    }
+    else if (events & BEV_EVENT_TIMEOUT)
+    {
+        std::cout << "Client connection timeout (fd=" << conn_fd << ")" << std::endl;
     }
     else
     {
@@ -96,7 +100,7 @@ void accept_cb(struct evconnlistener *listener, evutil_socket_t fd,
     inet_ntop(AF_INET, &(client_addr->sin_addr), ip_str, INET_ADDRSTRLEN);
     int port = ntohs(client_addr->sin_port);
 
-    std::cout << "[INFO] New client connected, fd=" << fd
+    std::cout << "New client connected, fd=" << fd
               << ", peer=" << ip_str << ":" << port << std::endl;
 
     g_server_seq[fd] = 0;

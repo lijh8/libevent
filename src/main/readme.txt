@@ -4,7 +4,7 @@ $ sudo apt-get install libevent-dev
 
 Makefile:
 
-LDLIBS = -levent
+LDLIBS += -levent
 
 Usage:
 
