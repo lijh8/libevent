@@ -79,8 +79,8 @@ void event_cb(struct bufferevent *bev, short events, void *ctx)
     bufferevent_free(bev);
 }
 
-void listener_cb(struct evconnlistener *listener, evutil_socket_t fd,
-                 struct sockaddr *addr, int socklen, void *ctx)
+void accept_cb(struct evconnlistener *listener, evutil_socket_t fd,
+               struct sockaddr *addr, int socklen, void *ctx)
 {
     struct event_base *base = static_cast<struct event_base *>(ctx);
 
@@ -136,7 +136,7 @@ int main(int argc, char **argv)
     sin.sin_port = htons(port);
 
     struct evconnlistener *listener = evconnlistener_new_bind(
-        base, listener_cb, base,
+        base, accept_cb, base,
         LEV_OPT_REUSEABLE | LEV_OPT_CLOSE_ON_FREE,
         -1, (struct sockaddr *)&sin, sizeof(sin));
 
