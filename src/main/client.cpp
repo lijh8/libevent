@@ -92,16 +92,11 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    std::string server_ip = argv[1];
+    char *server_ip = argv[1];
     int server_port = std::stoi(argv[2]);
     g_tag = argv[3];
 
     struct event_base *base = event_base_new();
-    if (!base)
-    {
-        std::cerr << "Failed to create event_base!" << std::endl;
-        return 1;
-    }
 
     struct bufferevent *bev = bufferevent_socket_new(base, -1, BEV_OPT_CLOSE_ON_FREE);
     if (!bev)
@@ -119,7 +114,7 @@ int main(int argc, char **argv)
     sin.sin_family = AF_INET;
     sin.sin_port = htons(server_port);
 
-    if (evutil_inet_pton(AF_INET, server_ip.c_str(), &sin.sin_addr) <= 0)
+    if (evutil_inet_pton(AF_INET, server_ip, &sin.sin_addr) <= 0)
     {
         std::cerr << "Invalid server IP address: " << server_ip << std::endl;
         bufferevent_free(bev);

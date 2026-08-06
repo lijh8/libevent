@@ -37,7 +37,9 @@ void timer_cb(evutil_socket_t fd, short event, void *arg)
     struct bufferevent *bev = static_cast<struct bufferevent *>(arg);
     int conn_fd = bufferevent_getfd(bev);
     if (conn_fd < 0)
+    {
         return;
+    }
 
     g_seq[conn_fd]++;
 
@@ -95,13 +97,13 @@ void accept_cb(struct evconnlistener *listener, evutil_socket_t fd,
     bufferevent_setcb(bev, read_cb, nullptr, event_cb, bev);
     bufferevent_enable(bev, EV_READ);
 
-    char ip_str[INET_ADDRSTRLEN];
-    struct sockaddr_in *client_addr = (struct sockaddr_in *)addr;
-    inet_ntop(AF_INET, &(client_addr->sin_addr), ip_str, INET_ADDRSTRLEN);
-    int port = ntohs(client_addr->sin_port);
+    char peer_ip[INET_ADDRSTRLEN];
+    struct sockaddr_in *peer_addr = (struct sockaddr_in *)addr;
+    evutil_inet_ntop(AF_INET, &(peer_addr->sin_addr), peer_ip, INET_ADDRSTRLEN);
+    int peer_port = ntohs(peer_addr->sin_port);
 
     std::cout << "New client connected, fd=" << fd
-              << ", peer=" << ip_str << ":" << port << std::endl;
+              << ", peer=" << peer_ip << ":" << peer_port << std::endl;
 
     g_seq[fd] = 0;
 
@@ -123,17 +125,12 @@ int main(int argc, char **argv)
     int port = std::stoi(argv[1]);
 
     struct event_base *base = event_base_new();
-    if (!base)
-    {
-        std::cerr << "Failed to create event_base!" << std::endl;
-        return 1;
-    }
 
     struct sockaddr_in sin;
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
-    sin.sin_addr.s_addr = htonl(INADDR_ANY);
     sin.sin_port = htons(port);
+    sin.sin_addr.s_addr = htonl(INADDR_ANY);
 
     struct evconnlistener *listener = evconnlistener_new_bind(
         base, accept_cb, base,
