@@ -6,15 +6,15 @@ echo "Log file: memory_log_$(date +%Y%m%d_%H%M%S).txt"
 echo "This test will run for 24 hours..."
 echo "Press Ctrl+C to stop"
 
-./server 8888 &
+./server 8888 > /dev/null 2>&1 &
 SERVER_PID=$!
 
 sleep 1
 
-./client 192.168.1.16 8888 tom &
+./client 192.168.1.16 8888 tom > /dev/null 2>&1 &
 CLIENT1_PID=$!
 
-./client 192.168.1.16 8888 jerry &
+./client 192.168.1.16 8888 jerry > /dev/null 2>&1 &
 CLIENT2_PID=$!
 
 echo "PIDs: Server=$SERVER_PID, Client1=$CLIENT1_PID, Client2=$CLIENT2_PID"
