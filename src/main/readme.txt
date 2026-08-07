@@ -2,9 +2,11 @@ Install:
 
 $ sudo apt-get install libevent-dev
 
+
 Makefile:
 
 LDLIBS += -levent
+
 
 Usage:
 
@@ -33,3 +35,44 @@ Reactor 模式 (e.g., libevent):
 
 Proactor 模式 (e.g., C++ Boost.Asio):
     通知 I/O 操作已完成 (completion)，读写已经完成。
+
+
+Test:
+
+# build without sanitizers
+
+$ ps -ef | grep "server 8888"
+ljh        37928    3506  0 05:39 pts/3    00:00:00 ./server 8888
+$
+$ ps -ef | grep client
+ljh        37968    4058  0 05:39 pts/0    00:00:00 ./client 192.168.1.16 8888 tom
+ljh        38006    4084  0 05:39 pts/1    00:00:00 ./client 192.168.1.16 8888 jerry
+$
+$ date; ps -o pid,rss,vsz,comm -p 37928,37968,38006
+Sat Aug  8 05:46:12 AM CST 2026
+    PID   RSS    VSZ COMMAND
+  37928  4552   7276 server
+  37968  4484   7248 client
+  38006  4464   7248 client
+$
+$ date; ps -o pid,rss,vsz,comm -p 37928,37968,38006
+Sat Aug  8 05:55:28 AM CST 2026
+    PID   RSS    VSZ COMMAND
+  37928  4552   7276 server
+  37968  4484   7248 client
+  38006  4464   7248 client
+$
+$ date; ps -o pid,rss,vsz,comm -p 37928,37968,38006
+Sat Aug  8 06:01:00 AM CST 2026
+    PID   RSS    VSZ COMMAND
+  37928  4552   7276 server
+  37968  4484   7248 client
+  38006  4464   7248 client
+$
+$ date; ps -o pid,rss,vsz,comm -p 37928,37968,38006
+Sat Aug  8 06:10:01 AM CST 2026
+    PID   RSS    VSZ COMMAND
+  37928  4552   7276 server
+  37968  4484   7248 client
+  38006  4464   7248 client
+$

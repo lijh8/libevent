@@ -7,7 +7,6 @@
 #include <cstring>
 #include <cerrno>
 #include <unordered_map>
-#include <stdexcept>
 #include <unistd.h>
 #include <signal.h>
 #include <arpa/inet.h>
@@ -56,28 +55,28 @@ void timer_cb(evutil_socket_t fd, short event, void *arg)
 
 void event_cb(struct bufferevent *bev, short events, void *ctx)
 {
-    int conn_fd = bufferevent_getfd(bev);
+    int fd = bufferevent_getfd(bev);
 
     if (events & BEV_EVENT_EOF)
     {
-        std::cout << "Client connection closed (fd=" << conn_fd << ")" << std::endl;
+        std::cout << "Client connection closed (fd=" << fd << ")" << std::endl;
     }
     else if (events & BEV_EVENT_ERROR)
     {
         int err = EVUTIL_SOCKET_ERROR();
-        std::cerr << "Client connection error (fd=" << conn_fd << "): "
+        std::cerr << "Client connection error (fd=" << fd << "): "
                   << evutil_socket_error_to_string(err) << std::endl;
     }
     else if (events & BEV_EVENT_TIMEOUT)
     {
-        std::cout << "Client connection timeout (fd=" << conn_fd << ")" << std::endl;
+        std::cout << "Client connection timeout (fd=" << fd << ")" << std::endl;
     }
     else
     {
         return;
     }
 
-    auto it = g_timers.find(conn_fd);
+    auto it = g_timers.find(fd);
     if (it != g_timers.end())
     {
         event_free(it->second);
@@ -85,8 +84,8 @@ void event_cb(struct bufferevent *bev, short events, void *ctx)
     }
 
     bufferevent_free(bev);
-    g_seq.erase(conn_fd);
-    g_bevs.erase(conn_fd);
+    g_seq.erase(fd);
+    g_bevs.erase(fd);
 }
 
 void accept_cb(struct evconnlistener *listener, evutil_socket_t fd,
@@ -132,19 +131,17 @@ int main(int argc, char **argv)
 
     int port = std::stoi(argv[1]);
 
-    struct event_base *base = event_base_new();
-
     struct sockaddr_in sin;
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
     sin.sin_port = htons(port);
     sin.sin_addr.s_addr = htonl(INADDR_ANY);
 
+    struct event_base *base = event_base_new();
     struct evconnlistener *listener = evconnlistener_new_bind(
         base, accept_cb, base,
         LEV_OPT_REUSEABLE | LEV_OPT_CLOSE_ON_FREE,
         -1, (struct sockaddr *)&sin, sizeof(sin));
-
     if (!listener)
     {
         std::cerr << "Failed to create listener: " << strerror(errno) << std::endl;
@@ -156,7 +153,6 @@ int main(int argc, char **argv)
     event_add(signal_ev, NULL);
 
     std::cout << "Server started, listening on port " << port << "..." << std::endl;
-
     event_base_dispatch(base);
 
     event_free(signal_ev);

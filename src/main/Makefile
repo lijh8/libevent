@@ -6,8 +6,8 @@ LDFLAGS  = # -L../foo -shared -static
 LDLIBS   = # -lfoo
 
 LDLIBS   += -levent
-CXXFLAGS += -fsanitize=address,leak,undefined
-LDFLAGS  += -fsanitize=address,leak,undefined
+# CXXFLAGS += -fsanitize=address,leak,undefined
+# LDFLAGS  += -fsanitize=address,leak,undefined
 
 ifneq ($(wildcard *.cpp),)
 CC       = $(CXX) # link with CXX for .cpp

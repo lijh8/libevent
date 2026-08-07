@@ -7,7 +7,6 @@
 #include <string>
 #include <cstring>
 #include <cerrno>
-#include <stdexcept>
 #include <signal.h>
 #include <arpa/inet.h>
 #include <event2/buffer.h>
@@ -48,11 +47,11 @@ void timer_cb(evutil_socket_t fd, short event, void *arg)
 
 void event_cb(struct bufferevent *bev, short events, void *ctx)
 {
-    int conn_fd = bufferevent_getfd(bev);
+    int fd = bufferevent_getfd(bev);
 
     if (events & BEV_EVENT_CONNECTED)
     {
-        std::cout << "Connected to server (fd=" << conn_fd << ")" << std::endl;
+        std::cout << "Connected to server (fd=" << fd << ")" << std::endl;
         g_timer_ev = event_new(bufferevent_get_base(bev), -1, EV_PERSIST, timer_cb, bev);
         struct timeval tv = {1, 0};
         event_add(g_timer_ev, &tv);
@@ -61,17 +60,17 @@ void event_cb(struct bufferevent *bev, short events, void *ctx)
 
     if (events & BEV_EVENT_EOF)
     {
-        std::cout << "Server connection closed (fd=" << conn_fd << ")" << std::endl;
+        std::cout << "Server connection closed (fd=" << fd << ")" << std::endl;
     }
     else if (events & BEV_EVENT_ERROR)
     {
         int err = EVUTIL_SOCKET_ERROR();
-        std::cerr << "Server connection error (fd=" << conn_fd << "): "
+        std::cerr << "Server connection error (fd=" << fd << "): "
                   << evutil_socket_error_to_string(err) << std::endl;
     }
     else if (events & BEV_EVENT_TIMEOUT)
     {
-        std::cout << "Server connection timeout (fd=" << conn_fd << ")" << std::endl;
+        std::cout << "Server connection timeout (fd=" << fd << ")" << std::endl;
     }
     else
     {
@@ -94,8 +93,18 @@ int main(int argc, char **argv)
     int server_port = std::stoi(argv[2]);
     g_tag = argv[3];
 
-    struct event_base *base = event_base_new();
+    struct sockaddr_in sin;
+    memset(&sin, 0, sizeof(sin));
+    sin.sin_family = AF_INET;
+    sin.sin_port = htons(server_port);
 
+    if (evutil_inet_pton(AF_INET, server_ip, &sin.sin_addr) <= 0)
+    {
+        std::cerr << "Invalid server IP address: " << server_ip << std::endl;
+        return 1;
+    }
+
+    struct event_base *base = event_base_new();
     struct bufferevent *bev = bufferevent_socket_new(base, -1, BEV_OPT_CLOSE_ON_FREE);
     if (!bev)
     {
@@ -106,19 +115,6 @@ int main(int argc, char **argv)
 
     bufferevent_setcb(bev, read_cb, nullptr, event_cb, bev);
     bufferevent_enable(bev, EV_READ);
-
-    struct sockaddr_in sin;
-    memset(&sin, 0, sizeof(sin));
-    sin.sin_family = AF_INET;
-    sin.sin_port = htons(server_port);
-
-    if (evutil_inet_pton(AF_INET, server_ip, &sin.sin_addr) <= 0)
-    {
-        std::cerr << "Invalid server IP address: " << server_ip << std::endl;
-        bufferevent_free(bev);
-        event_base_free(base);
-        return 1;
-    }
 
     if (bufferevent_socket_connect(bev, (struct sockaddr *)&sin, sizeof(sin)) < 0)
     {
@@ -133,7 +129,6 @@ int main(int argc, char **argv)
 
     std::cout << "Attempting to connect to server "
               << server_ip << ":" << server_port << "..." << std::endl;
-
     event_base_dispatch(base);
 
     event_free(signal_ev);
