@@ -21,7 +21,7 @@ std::string g_tag;
 
 void sigint_cb(evutil_socket_t fd, short what, void *arg)
 {
-    struct event_base *base = static_cast<struct event_base *>(arg);
+    struct event_base *base = (struct event_base *)arg;
     event_base_loopexit(base, NULL);
 }
 
@@ -40,7 +40,7 @@ void read_cb(struct bufferevent *bev, void *ctx)
 
 void timer_cb(evutil_socket_t fd, short event, void *arg)
 {
-    struct bufferevent *bev = static_cast<struct bufferevent *>(arg);
+    struct bufferevent *bev = (struct bufferevent *)arg;
     g_seq++;
     std::string msg = "hello from client " + g_tag + " " + std::to_string(g_seq) + "\n";
     bufferevent_write(bev, msg.c_str(), msg.length());

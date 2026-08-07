@@ -23,7 +23,7 @@ std::unordered_map<int, struct bufferevent *> g_bevs;
 
 void sigint_cb(evutil_socket_t fd, short what, void *arg)
 {
-    struct event_base *base = static_cast<struct event_base *>(arg);
+    struct event_base *base = (struct event_base *)arg;
     event_base_loopexit(base, NULL);
 }
 
@@ -42,7 +42,7 @@ void read_cb(struct bufferevent *bev, void *ctx)
 
 void timer_cb(evutil_socket_t fd, short event, void *arg)
 {
-    struct bufferevent *bev = static_cast<struct bufferevent *>(arg);
+    struct bufferevent *bev = (struct bufferevent *)arg;
     int conn_fd = bufferevent_getfd(bev);
     if (conn_fd < 0)
     {
@@ -92,7 +92,7 @@ void event_cb(struct bufferevent *bev, short events, void *ctx)
 void accept_cb(struct evconnlistener *listener, evutil_socket_t fd,
                struct sockaddr *addr, int socklen, void *ctx)
 {
-    struct event_base *base = static_cast<struct event_base *>(ctx);
+    struct event_base *base = (struct event_base *)ctx;
 
     struct bufferevent *bev = bufferevent_socket_new(base, fd, BEV_OPT_CLOSE_ON_FREE);
     if (!bev)
