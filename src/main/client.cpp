@@ -8,6 +8,7 @@
 #include <cstring>
 #include <cerrno>
 #include <stdexcept>
+#include <signal.h>
 #include <arpa/inet.h>
 #include <event2/buffer.h>
 #include <event2/bufferevent.h>
@@ -18,6 +19,12 @@ struct event *g_timer_ev = nullptr;
 int g_seq = 0;
 std::string g_tag;
 
+void sigint_cb(evutil_socket_t fd, short what, void *arg)
+{
+    struct event_base *base = static_cast<struct event_base *>(arg);
+    event_base_loopexit(base, NULL);
+}
+
 void read_cb(struct bufferevent *bev, void *ctx)
 {
     struct evbuffer *input = bufferevent_get_input(bev);
@@ -26,7 +33,7 @@ void read_cb(struct bufferevent *bev, void *ctx)
 
     while ((line = evbuffer_readln(input, &len, EVBUFFER_EOL_LF)) != NULL)
     {
-        std::cout << "Received from server: " << line << std::endl;
+        printf("Received from server: %.*s\n", (int)len, line);
         free(line);
     }
 }
@@ -35,7 +42,6 @@ void timer_cb(evutil_socket_t fd, short event, void *arg)
 {
     struct bufferevent *bev = static_cast<struct bufferevent *>(arg);
     g_seq++;
-
     std::string msg = "hello from client " + g_tag + " " + std::to_string(g_seq) + "\n";
     bufferevent_write(bev, msg.c_str(), msg.length());
 }
@@ -73,15 +79,7 @@ void event_cb(struct bufferevent *bev, short events, void *ctx)
     }
 
     struct event_base *base = bufferevent_get_base(bev);
-
-    if (g_timer_ev)
-    {
-        event_free(g_timer_ev);
-        g_timer_ev = nullptr;
-    }
-
-    bufferevent_free(bev);
-    event_base_loopbreak(base);
+    event_base_loopexit(base, NULL);
 }
 
 int main(int argc, char **argv)
@@ -130,11 +128,22 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    struct event *signal_ev = evsignal_new(base, SIGINT, sigint_cb, base);
+    event_add(signal_ev, NULL);
+
     std::cout << "Attempting to connect to server "
               << server_ip << ":" << server_port << "..." << std::endl;
 
     event_base_dispatch(base);
 
+    event_free(signal_ev);
+
+    if (g_timer_ev)
+    {
+        event_free(g_timer_ev);
+    }
+
+    bufferevent_free(bev);
     event_base_free(base);
     return 0;
 }

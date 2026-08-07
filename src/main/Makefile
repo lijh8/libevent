@@ -3,7 +3,11 @@ CFLAGS   = -g # -O3 -fPIC
 CXXFLAGS = -g # -O3 -fPIC
 CPPFLAGS = -MMD -MP # -I../foo -DNDEBUG
 LDFLAGS  = # -L../foo -shared -static
-LDLIBS   = -levent
+LDLIBS   = # -lfoo
+
+LDLIBS   += -levent
+CXXFLAGS += -fsanitize=address,leak,undefined
+LDFLAGS  += -fsanitize=address,leak,undefined
 
 ifneq ($(wildcard *.cpp),)
 CC       = $(CXX) # link with CXX for .cpp

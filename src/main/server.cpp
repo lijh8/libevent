@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <stdexcept>
 #include <unistd.h>
+#include <signal.h>
 #include <arpa/inet.h>
 #include <event2/listener.h>
 #include <event2/buffer.h>
@@ -18,6 +19,13 @@
 
 std::unordered_map<int, struct event *> g_timers;
 std::unordered_map<int, int> g_seq;
+std::unordered_map<int, struct bufferevent *> g_bevs;
+
+void sigint_cb(evutil_socket_t fd, short what, void *arg)
+{
+    struct event_base *base = static_cast<struct event_base *>(arg);
+    event_base_loopexit(base, NULL);
+}
 
 void read_cb(struct bufferevent *bev, void *ctx)
 {
@@ -27,7 +35,7 @@ void read_cb(struct bufferevent *bev, void *ctx)
 
     while ((line = evbuffer_readln(input, &len, EVBUFFER_EOL_LF)) != NULL)
     {
-        std::cout << "Received from client: " << line << std::endl;
+        printf("Received from client: %.*s\n", (int)len, line);
         free(line);
     }
 }
@@ -42,7 +50,6 @@ void timer_cb(evutil_socket_t fd, short event, void *arg)
     }
 
     g_seq[conn_fd]++;
-
     std::string msg = "hello from server " + std::to_string(g_seq[conn_fd]) + "\n";
     bufferevent_write(bev, msg.c_str(), msg.length());
 }
@@ -77,8 +84,9 @@ void event_cb(struct bufferevent *bev, short events, void *ctx)
         g_timers.erase(it);
     }
 
-    g_seq.erase(conn_fd);
     bufferevent_free(bev);
+    g_seq.erase(conn_fd);
+    g_bevs.erase(conn_fd);
 }
 
 void accept_cb(struct evconnlistener *listener, evutil_socket_t fd,
@@ -97,21 +105,21 @@ void accept_cb(struct evconnlistener *listener, evutil_socket_t fd,
     bufferevent_setcb(bev, read_cb, nullptr, event_cb, bev);
     bufferevent_enable(bev, EV_READ);
 
-    char peer_ip[INET_ADDRSTRLEN];
+    struct event *timer_ev = event_new(base, -1, EV_PERSIST, timer_cb, bev);
+    struct timeval tv = {1, 0};
+    event_add(timer_ev, &tv);
+
+    g_timers[fd] = timer_ev;
+    g_seq[fd] = 0;
+    g_bevs[fd] = bev;
+
     struct sockaddr_in *peer_addr = (struct sockaddr_in *)addr;
-    evutil_inet_ntop(AF_INET, &(peer_addr->sin_addr), peer_ip, INET_ADDRSTRLEN);
     int peer_port = ntohs(peer_addr->sin_port);
+    char peer_ip[INET_ADDRSTRLEN];
+    evutil_inet_ntop(AF_INET, &(peer_addr->sin_addr), peer_ip, INET_ADDRSTRLEN);
 
     std::cout << "New client connected, fd=" << fd
               << ", peer=" << peer_ip << ":" << peer_port << std::endl;
-
-    g_seq[fd] = 0;
-
-    struct event *timer_ev = event_new(base, -1, EV_PERSIST, timer_cb, bev);
-    g_timers[fd] = timer_ev;
-
-    struct timeval tv = {1, 0};
-    event_add(timer_ev, &tv);
 }
 
 int main(int argc, char **argv)
@@ -144,8 +152,24 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    struct event *signal_ev = evsignal_new(base, SIGINT, sigint_cb, base);
+    event_add(signal_ev, NULL);
+
     std::cout << "Server started, listening on port " << port << "..." << std::endl;
+
     event_base_dispatch(base);
+
+    event_free(signal_ev);
+
+    for (auto &p : g_timers)
+    {
+        event_free(p.second);
+    }
+
+    for (auto &p : g_bevs)
+    {
+        bufferevent_free(p.second);
+    }
 
     evconnlistener_free(listener);
     event_base_free(base);

@@ -8,7 +8,14 @@ LDLIBS += -levent
 
 Usage:
 
-使用 bufferevent_read、evbuffer_readln、bufferevent_write 等函数进行数据读写操作。
+服务端和客服端创建事件循环调度器 event_base;
+服务端监听并在回调中接受(accept)连接请求 evconnlistener_new_bind,
+客服端发起连接请求 bufferevent_socket_connect;
+双方调用 bufferevent_socket_new 创建 bufferevent;
+双方启动事件循环 event_base_dispatch;
+
+只要 bufferevent 有效的条件下，可以在事件循环运行的任何回调上下文中，
+使用 bufferevent_read, evbuffer_readln, bufferevent_write 等函数进行数据读写操作。
 
 bufferevent_setcb(bufev, readcb, writecb, eventcb, cbarg);
 读写操作可以在 bufferevent_setcb 注册的回调函数（如 readcb 或 writecb）中进行。
