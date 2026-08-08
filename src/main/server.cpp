@@ -43,11 +43,6 @@ void timer_cb(evutil_socket_t fd, short event, void *arg)
 {
     struct bufferevent *bev = (struct bufferevent *)arg;
     int conn_fd = bufferevent_getfd(bev);
-    if (conn_fd < 0)
-    {
-        return;
-    }
-
     g_seq[conn_fd]++;
     std::string msg = "hello from server " + std::to_string(g_seq[conn_fd]) + "\n";
     bufferevent_write(bev, msg.c_str(), msg.length());
@@ -92,7 +87,6 @@ void accept_cb(struct evconnlistener *listener, evutil_socket_t fd,
                struct sockaddr *addr, int socklen, void *ctx)
 {
     struct event_base *base = (struct event_base *)ctx;
-
     struct bufferevent *bev = bufferevent_socket_new(base, fd, BEV_OPT_CLOSE_ON_FREE);
     if (!bev)
     {
@@ -108,9 +102,9 @@ void accept_cb(struct evconnlistener *listener, evutil_socket_t fd,
     struct timeval tv = {1, 0};
     event_add(timer_ev, &tv);
 
+    g_bevs[fd] = bev;
     g_timers[fd] = timer_ev;
     g_seq[fd] = 0;
-    g_bevs[fd] = bev;
 
     struct sockaddr_in *peer_addr = (struct sockaddr_in *)addr;
     int peer_port = ntohs(peer_addr->sin_port);
@@ -144,7 +138,9 @@ int main(int argc, char **argv)
         -1, (struct sockaddr *)&sin, sizeof(sin));
     if (!listener)
     {
-        std::cerr << "Failed to create listener: " << strerror(errno) << std::endl;
+        int err = EVUTIL_SOCKET_ERROR();
+        std::cerr << "Failed to create listener: "
+                  << evutil_socket_error_to_string(err) << std::endl;
         event_base_free(base);
         return 1;
     }

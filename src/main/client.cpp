@@ -118,7 +118,9 @@ int main(int argc, char **argv)
 
     if (bufferevent_socket_connect(bev, (struct sockaddr *)&sin, sizeof(sin)) < 0)
     {
-        std::cerr << "Failed to initiate connection: " << strerror(errno) << std::endl;
+        int err = EVUTIL_SOCKET_ERROR();
+        std::cerr << "Failed to initiate connection: "
+                  << evutil_socket_error_to_string(err) << std::endl;
         bufferevent_free(bev);
         event_base_free(base);
         return 1;
