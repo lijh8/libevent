@@ -26,10 +26,8 @@ static void read_cb(struct bufferevent *bev, void *ctx)
     while ((line = evbuffer_readln(input, &len, EVBUFFER_EOL_LF)))
     {
         printf("Received: %.*s\n", (int)len, line);
-
         const char *reply = "hello from server\n";
         bufferevent_write(bev, reply, strlen(reply));
-
         free(line);
     }
 }
@@ -41,8 +39,7 @@ static void event_cb(struct bufferevent *bev, short events, void *ctx)
     if (events & BEV_EVENT_ERROR)
     {
         int err = EVUTIL_SOCKET_ERROR();
-        fprintf(stderr, "Connection error, fd=%d: %s\n", fd,
-                evutil_socket_error_to_string(err));
+        fprintf(stderr, "Connection error, fd=%d: %s\n", fd, evutil_socket_error_to_string(err));
         bufferevent_free(bev);
     }
     else if (events & BEV_EVENT_EOF)
@@ -65,15 +62,13 @@ static void accept_cb(struct evconnlistener *listener,
 {
     struct event_base *base = (struct event_base *)ctx;
     struct bufferevent *bev = bufferevent_socket_new(base, fd, BEV_OPT_CLOSE_ON_FREE);
-
     bufferevent_setcb(bev, read_cb, NULL, event_cb, NULL);
     bufferevent_enable(bev, EV_READ);
 
     struct sockaddr_in *peer_addr = (struct sockaddr_in *)addr;
     char peer_ip[INET_ADDRSTRLEN];
     evutil_inet_ntop(AF_INET, &(peer_addr->sin_addr), peer_ip, INET_ADDRSTRLEN);
-    printf("New client connected: %s:%d\n",
-           peer_ip, ntohs(peer_addr->sin_port));
+    printf("New client connected: %s:%d\n", peer_ip, ntohs(peer_addr->sin_port));
 }
 
 int main(int argc, char **argv)
@@ -92,17 +87,17 @@ int main(int argc, char **argv)
 
     if (!listener)
     {
-        fprintf(stderr, "Failed to create listener on port %d\n", PORT);
+        int err = EVUTIL_SOCKET_ERROR();
+        fprintf(stderr, "Listener error: %s\n", evutil_socket_error_to_string(err));
         event_base_free(base);
         return 1;
     }
+    printf("Listening on port %d ...\n", PORT);
 
     struct event *signal_ev = evsignal_new(base, SIGINT, sigint_cb, base);
     event_add(signal_ev, NULL);
 
-    printf("Listening on port %d ...\n", PORT);
     event_base_dispatch(base);
-
     event_free(signal_ev);
     evconnlistener_free(listener);
     event_base_free(base);

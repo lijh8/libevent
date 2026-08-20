@@ -28,7 +28,6 @@ static void read_cb(struct bufferevent *bev, void *ctx)
     {
         printf("Received: %.*s\n", (int)len, line);
         free(line);
-
         event_base_loopbreak(base); // break here for test only
     }
 }
@@ -41,15 +40,13 @@ static void event_cb(struct bufferevent *bev, short events, void *ctx)
     if (events & BEV_EVENT_CONNECTED)
     {
         printf("Connected to server\n");
-
         const char *msg = "hello from client\n";
         bufferevent_write(bev, msg, strlen(msg));
     }
     else if (events & BEV_EVENT_ERROR)
     {
         int err = EVUTIL_SOCKET_ERROR();
-        fprintf(stderr, "Connection error, fd=%d: %s\n", fd,
-                evutil_socket_error_to_string(err));
+        fprintf(stderr, "Connection error, fd=%d: %s\n", fd, evutil_socket_error_to_string(err));
         event_base_loopbreak(base);
     }
     else if (events & BEV_EVENT_EOF)
@@ -84,19 +81,18 @@ int main(int argc, char **argv)
 
     if (bufferevent_socket_connect(bev, (struct sockaddr *)&sin, sizeof(sin)) < 0)
     {
-        fprintf(stderr, "Failed to initiate connection\n");
+        int err = EVUTIL_SOCKET_ERROR();
+        fprintf(stderr, "Connect error: %s\n", evutil_socket_error_to_string(err));
         bufferevent_free(bev);
         event_base_free(base);
         return 1;
     }
-
     printf("Connecting to %s:%d ...\n", SERVER_IP, SERVER_PORT);
 
     struct event *signal_ev = evsignal_new(base, SIGINT, sigint_cb, base);
     event_add(signal_ev, NULL);
 
     event_base_dispatch(base);
-
     event_free(signal_ev);
     bufferevent_free(bev);
     event_base_free(base);
