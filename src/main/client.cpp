@@ -82,7 +82,7 @@ int main(int argc, char **argv)
     if (bufferevent_socket_connect(bev, (struct sockaddr *)&sin, sizeof(sin)) < 0)
     {
         int err = EVUTIL_SOCKET_ERROR();
-        fprintf(stderr, "Connect error: %s\n", evutil_socket_error_to_string(err));
+        fprintf(stderr, "Failed to connect: %s\n", evutil_socket_error_to_string(err));
         bufferevent_free(bev);
         event_base_free(base);
         return 1;
