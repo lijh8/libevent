@@ -87,7 +87,7 @@ int main(int argc, char **argv)
         event_base_free(base);
         return 1;
     }
-    printf("Connecting to %s:%d ...\n", SERVER_IP, SERVER_PORT);
+    printf("Connecting to server %s:%d ...\n", SERVER_IP, SERVER_PORT);
 
     struct event *signal_ev = evsignal_new(base, SIGINT, sigint_cb, base);
     event_add(signal_ev, NULL);
